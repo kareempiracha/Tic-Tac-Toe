@@ -1,0 +1,164 @@
+#include <stdio.h> 
+#include <string.h> 
+#include <fcntl.h> 
+#include <sys/stat.h> 
+#include <sys/types.h> 
+#include <unistd.h> 
+#include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
+#include <pthread.h>
+clock_t tStart,t_End;
+double timeT;
+
+void initialize(char game[][3]){
+
+for(int i=0;i<3;i++)
+  for(int j=0;j<3;j++)
+      game[i][j]='_';
+
+}
+ void *getTime(void *p)
+{
+timeT= (double)(time(&t_End) - tStart);
+} 
+void print(char game[][3]){
+   system("@cls||clear");
+ printf("\n");
+
+printf("  0  1  2");
+  printf("\n");
+for(int i=0;i<3;i++){
+        printf("%d",i);
+  for(int j=0;j<3;j++){
+        printf(" %c",game[i][j]);
+        printf(" ");          
+}
+  printf("\n");
+}
+
+}
+bool isTie(char game[][3]){
+	int c = 0;
+for(int i = 0;i<3;i++){
+	for(int j = 0;j<3;j++){
+		if(game[i][j]!='_'){
+		c++;
+		}
+	}
+}
+
+if(c==9){
+  return true;
+}
+return false;
+}
+
+bool valid(char game[][3],int x,int y){
+	if(game[x][y]=='_' && x<3 && x>=0 && y<3 && y>=0){
+	return true;
+	}
+	return false;
+
+}
+
+bool check_win(char game[][3],char player){
+bool win=false;     
+
+if(game[0][0] == player && game[1][1] == player && game[2][2] == player)
+{win = true;}
+if(game[0][0] == player && game[1][0] == player && game[2][0] == player)
+{win = true;}
+if(game[0][2] == player && game[1][2] == player && game[2][2] == player)
+{win = true;}
+if(game[0][0] == player && game[0][1] == player && game[0][2] == player)
+{win = true;}
+if(game[1][0] == player && game[1][1] == player && game[1][2] == player)
+{win = true;}
+if(game[2][0] == player && game[2][1] == player && game[2][2] == player)
+{win = true;}
+if(game[2][0] == player && game[1][1] == player && game[0][2] == player)
+{win = true;}
+if(game[0][1] == player && game[2][1] == player && game[1][1] == player)
+{win = true;}
+
+
+return win;
+}
+
+int main() 
+{ 
+    int fd;
+
+    char * myfifo = "/tmp/myfile"; 
+    
+    mkfifo(myfifo, 0666); 
+    
+    char tictactoe[3][3];
+    int x,y; 
+    bool finish=false;
+    initialize(tictactoe);    
+    print(tictactoe);    
+
+pthread_t tid;
+   while (!finish) 
+    {
+        printf("Player 2's Turn");
+        fd = open(myfifo, O_RDONLY);
+        read(fd,&x,sizeof(x));
+        read(fd,&y,sizeof(y));
+        close(fd); 
+
+        tictactoe[x][y]='X';
+        print(tictactoe);
+ 
+       if(check_win(tictactoe,'X')){
+       printf("Player 1 Wins!");
+           printf("\n");
+       finish=true;
+        }
+       else if(isTie(tictactoe)){
+     printf("Its a Tie!");
+           printf("\n");
+       finish=true; 
+       }
+      else{
+        time(&tStart);
+        printf("Enter x: ");
+        scanf("%d",&x);
+        printf("Enter y: ");
+        scanf("%d",&y);
+
+        while(!valid(tictactoe,x,y)){
+        printf("Invalid Input! Enter x:");
+        scanf("%d",&x);
+        printf("Enter y: ");
+        scanf("%d",&y);
+        }        
+       pthread_create(&(tid),NULL,getTime,NULL);
+pthread_join(tid,NULL);
+        tictactoe[x][y]='O';
+    
+        fd = open(myfifo, O_WRONLY);
+        
+        write(fd, &x,sizeof(x));
+        write(fd, &y,sizeof(y));
+         
+        close(fd); 
+ 
+        print(tictactoe);
+      printf("Time taken: %.2fs\n",timeT);
+        if(check_win(tictactoe,'O')){
+           printf("You Win!");
+           printf("\n");
+            finish=true;}
+        else if(isTie(tictactoe)){
+           printf("Its a Tie!");
+           printf("\n");
+            finish=true;
+            }       
+}
+    }
+  
+    return 0; 
+}
